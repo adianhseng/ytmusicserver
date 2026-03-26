@@ -17,7 +17,7 @@ if cookie_data:
 
 @app.route('/')
 def home():
-    return "🚀 API Railway (Fix Tận Gốc Lỗi Format Proxy) đang hoạt động!"
+    return "🚀 API Railway (Bản Giải Phóng YT-DLP) đang hoạt động!"
 
 @app.route('/api/play')
 def play_audio():
@@ -34,16 +34,11 @@ def play_audio():
     if not audio_url:
         youtube_url = f"https://www.youtube.com/watch?v={video_id}"
         ydl_opts = {
-            # CHUẨN MỚI: Bắt buộc lấy file m4a thô, nếu không có thì lấy mp4, cuối cùng mới lấy best
-            'format': '140/bestaudio[ext=m4a]/bestaudio[ext=mp4]/bestaudio/best',
+            # CHỈ ĐỊNH ĐƠN GIẢN: Ưu tiên m4a, nếu không có lấy audio xịn nhất, cuối cùng lấy bừa file tốt nhất
+            'format': '140/bestaudio[ext=m4a]/bestaudio/best',
             
-            # VŨ KHÍ TỐI THƯỢNG: Giả lập Android để ép YouTube giao file thô thay vì file M3U8
-            'extractor_args': {'youtube': {'client': ['android', 'web']}},
-            
-            # BẮT BUỘC TẮT: Server Proxy không thể đọc hiểu và truyền file manifest (DASH/HLS)
-            'youtube_include_dash_manifest': False,
-            'youtube_include_hls_manifest': False,
-            
+            # TUYỆT ĐỐI XÓA EXTRACTOR_ARGS VÀ MANIFEST: 
+            # Thả rông cho yt-dlp tự dùng bộ não của nó để luồn lách qua anti-bot của YouTube
             'noplaylist': True,
             'quiet': True,
             'no_warnings': True
