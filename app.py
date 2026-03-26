@@ -17,7 +17,7 @@ if cookie_data:
 
 @app.route('/')
 def home():
-    return "🚀 API Railway (Fix Tận Gốc Định Dạng DASH/HLS) đang hoạt động!"
+    return "🚀 API Railway (Fix Format NCS - Trả lại Client Web) đang hoạt động!"
 
 @app.route('/api/play')
 def play_audio():
@@ -27,17 +27,19 @@ def play_audio():
 
     video_id = request.args.get('v')
     if not video_id:
-        return "Lỗi: Thiếu ID bài hát", 400
+        return "Lỗi: Thiếu ID", 400
 
     audio_url = url_cache.get(video_id)
 
     if not audio_url:
         youtube_url = f"https://www.youtube.com/watch?v={video_id}"
         ydl_opts = {
-            # Ưu tiên lấy file m4a hoặc chất lượng audio tốt nhất
-            'format': 'bestaudio[ext=m4a]/140/m4a/bestaudio/best',
-            'extractor_args': {'youtube': {'client': ['ios', 'tv', 'android']}},
-            # FIX TỬ HUYỆT: Phải bật True để đọc được nhạc ẩn của Vevo/NCS
+            # CHUẨN ĐỊNH DẠNG BẤT TỬ: Quét từ m4a -> mp4 -> audio bất kỳ
+            'format': '140/bestaudio[ext=m4a]/m4a/best[ext=mp4]/bestaudio/best',
+            
+            # ĐÃ GỠ MẶT NẠ TV/VR: Dùng Web và Android để YouTube hiển thị toàn bộ định dạng bài hát
+            'extractor_args': {'youtube': {'client': ['web', 'android', 'ios']}},
+            
             'youtube_include_dash_manifest': True,
             'youtube_include_hls_manifest': True,
             'noplaylist': True,
