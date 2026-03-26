@@ -17,7 +17,7 @@ if cookie_data:
 
 @app.route('/')
 def home():
-    return "🚀 API Railway (Bản Proxy 64KB Test eb372) đang hoạt động!"
+    return "🚀 API Railway (Bản Proxy 64KB - Đã Fix Lỗi Format) đang hoạt động!"
 
 @app.route('/api/play')
 def play_audio():
@@ -34,7 +34,8 @@ def play_audio():
     if not audio_url:
         youtube_url = f"https://www.youtube.com/watch?v={video_id}"
         ydl_opts = {
-            'format': '140/bestaudio[ext=m4a]/18/best[ext=mp4]',
+            # ĐÃ SỬA: Nới lỏng định dạng để bài nào cũng bắt được link
+            'format': '140/m4a/bestaudio/best',
             'extractor_args': {'youtube': {'client': ['tv', 'android_vr', 'ios']}},
             'youtube_include_dash_manifest': False,
             'youtube_include_hls_manifest': False,
@@ -69,7 +70,6 @@ def play_audio():
                 del url_cache[video_id]
             return "🚨 Bị khóa IP bởi Vevo. Đã xóa cache!", 403
 
-        # Đã hạ chunk_size xuống 64KB (65536) để WP8.1 nhận dạng file ngay lập tức
         def generate():
             for chunk in r.iter_content(chunk_size=65536):
                 if chunk:
