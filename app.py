@@ -17,7 +17,7 @@ if cookie_data:
 
 @app.route('/')
 def home():
-    return "🚀 API Railway (Fix Format NCS - Trả lại Client Web) đang hoạt động!"
+    return "🚀 API Railway (Fix Tận Gốc Lỗi Format Proxy) đang hoạt động!"
 
 @app.route('/api/play')
 def play_audio():
@@ -27,21 +27,23 @@ def play_audio():
 
     video_id = request.args.get('v')
     if not video_id:
-        return "Lỗi: Thiếu ID", 400
+        return "Lỗi: Thiếu ID bài hát", 400
 
     audio_url = url_cache.get(video_id)
 
     if not audio_url:
         youtube_url = f"https://www.youtube.com/watch?v={video_id}"
         ydl_opts = {
-            # CHUẨN ĐỊNH DẠNG BẤT TỬ: Quét từ m4a -> mp4 -> audio bất kỳ
-            'format': '140/bestaudio[ext=m4a]/m4a/best[ext=mp4]/bestaudio/best',
+            # CHUẨN MỚI: Bắt buộc lấy file m4a thô, nếu không có thì lấy mp4, cuối cùng mới lấy best
+            'format': '140/bestaudio[ext=m4a]/bestaudio[ext=mp4]/bestaudio/best',
             
-            # ĐÃ GỠ MẶT NẠ TV/VR: Dùng Web và Android để YouTube hiển thị toàn bộ định dạng bài hát
-            'extractor_args': {'youtube': {'client': ['web', 'android', 'ios']}},
+            # VŨ KHÍ TỐI THƯỢNG: Giả lập Android để ép YouTube giao file thô thay vì file M3U8
+            'extractor_args': {'youtube': {'client': ['android', 'web']}},
             
-            'youtube_include_dash_manifest': True,
-            'youtube_include_hls_manifest': True,
+            # BẮT BUỘC TẮT: Server Proxy không thể đọc hiểu và truyền file manifest (DASH/HLS)
+            'youtube_include_dash_manifest': False,
+            'youtube_include_hls_manifest': False,
+            
             'noplaylist': True,
             'quiet': True,
             'no_warnings': True
