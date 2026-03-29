@@ -7,30 +7,25 @@ import yt_dlp
 
 app = Flask(__name__)
 
+# TỐI ƯU 1: CACHE CHỐNG TRÀN RAM
 url_cache = TTLCache(maxsize=1000, ttl=7200)
-SECRET_KEY = os.environ.get("APP_SECRET_KEY", "LumiaWP81-An")
 
-# NẠP COOKIE CHỐNG GIỚI HẠN ĐỘ TUỔI
-cookie_data = os.environ.get('COOKIE_DATA')
-if cookie_data:
-    with open('cookies.txt', 'w', encoding='utf-8') as f:
-        f.write(cookie_data)
+# TỐI ƯU 2: KHÓA BẢO MẬT
+SECRET_KEY = os.environ.get("APP_SECRET_KEY", "LumiaWP81-An")
 
 @app.route('/')
 def home():
-    return "🚀 API Railway (Bản Kép Nồi Đồng Cối Đá - Mặt Nạ 4 Lớp) đang hoạt động!"
+    return "🚀 API Railway (Bản Kép: Nghe Redirect - Tải Proxy - Dựa trên app 8) đang hoạt động!"
 
+# HÀM LẤY LINK: GIỮ NGUYÊN 100% CẤU HÌNH TỪ FILE app (8).py CỦA BẠN
 def get_audio_url(video_id):
     if video_id in url_cache:
         return url_cache[video_id]
 
     youtube_url = f"https://www.youtube.com/watch?v={video_id}"
     ydl_opts = {
-        'format': '140/bestaudio[ext=m4a]/18/best[ext=mp4]',
-        
-        # CHỐT GIỮ MẶT NẠ 4 LỚP: Đảm bảo khả năng vượt rào mạnh mẽ nhất
+        'format': '140/bestaudio[ext=m4a]/bestaudio/best',
         'extractor_args': {'youtube': {'client': ['android', 'ios', 'tv', 'web']}},
-        
         'youtube_include_dash_manifest': False,
         'youtube_include_hls_manifest': False,
         'noplaylist': True,
@@ -38,9 +33,6 @@ def get_audio_url(video_id):
         'no_warnings': True
     }
     
-    if os.path.exists('cookies.txt'):
-        ydl_opts['cookiefile'] = 'cookies.txt'
-
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(youtube_url, download=False)
@@ -52,13 +44,13 @@ def get_audio_url(video_id):
         raise e
 
 # ==================================================
-# CỔNG 1: NGHE NHẠC (Chuyển hướng trực tiếp để Lumia tự xử lý)
+# CỔNG 1: NGHE NHẠC (Redirect giống hệt app 8 - Chạy cực mượt)
 # ==================================================
 @app.route('/api/play')
 def play_audio():
     client_key = request.args.get("key")
     if client_key != SECRET_KEY:
-        return jsonify({"error": "Unauthorized!"}), 403
+        return jsonify({"error": "Unauthorized! Đi chỗ khác chơi!"}), 403
 
     video_id = request.args.get('v')
     if not video_id:
@@ -75,13 +67,13 @@ def play_audio():
         return f"🚨 Lỗi: {str(e)}", 500
 
 # ==================================================
-# CỔNG 2: TẢI OFFLINE (Sử dụng Proxy bơm dữ liệu lớn)
+# CỔNG 2: TẢI OFFLINE (Bơm Proxy 1MB/s để ép tốc độ)
 # ==================================================
 @app.route('/api/download')
 def download_audio():
     client_key = request.args.get("key")
     if client_key != SECRET_KEY:
-        return jsonify({"error": "Unauthorized!"}), 403
+        return jsonify({"error": "Unauthorized! Đi chỗ khác chơi!"}), 403
 
     video_id = request.args.get('v')
     if not video_id:
