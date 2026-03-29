@@ -7,17 +7,19 @@ import yt_dlp
 
 app = Flask(__name__)
 
-# TỐI ƯU 1: CACHE CHỐNG TRÀN RAM
 url_cache = TTLCache(maxsize=1000, ttl=7200)
-
-# TỐI ƯU 2: KHÓA BẢO MẬT
 SECRET_KEY = os.environ.get("APP_SECRET_KEY", "LumiaWP81-An")
+
+# 1. PHỤC HỒI COOKIES: Giúp qua mặt giới hạn độ tuổi tức thì mà không cần load đường vòng
+cookie_data = os.environ.get('COOKIE_DATA')
+if cookie_data:
+    with open('cookies.txt', 'w', encoding='utf-8') as f:
+        f.write(cookie_data)
 
 @app.route('/')
 def home():
-    return "🚀 API Railway (Bản Kép: Nghe Redirect - Tải Proxy - Dựa trên app 8) đang hoạt động!"
+    return "🚀 API Railway (Bản Kép - Tối Ưu Tốc Độ Load) đang hoạt động!"
 
-# HÀM LẤY LINK: GIỮ NGUYÊN 100% CẤU HÌNH TỪ FILE app (8).py CỦA BẠN
 def get_audio_url(video_id):
     if video_id in url_cache:
         return url_cache[video_id]
@@ -25,7 +27,10 @@ def get_audio_url(video_id):
     youtube_url = f"https://www.youtube.com/watch?v={video_id}"
     ydl_opts = {
         'format': '140/bestaudio[ext=m4a]/bestaudio/best',
-        'extractor_args': {'youtube': {'client': ['android', 'ios', 'tv', 'web']}},
+        
+        # 2. LỘT BỚT MẶT NẠ: Chỉ dùng 'web' và 'android', bỏ 'ios' và 'tv' để tăng gấp đôi tốc độ dò link
+        'extractor_args': {'youtube': {'client': ['web', 'android']}},
+        
         'youtube_include_dash_manifest': False,
         'youtube_include_hls_manifest': False,
         'noplaylist': True,
@@ -33,6 +38,9 @@ def get_audio_url(video_id):
         'no_warnings': True
     }
     
+    if os.path.exists('cookies.txt'):
+        ydl_opts['cookiefile'] = 'cookies.txt'
+
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(youtube_url, download=False)
@@ -44,13 +52,13 @@ def get_audio_url(video_id):
         raise e
 
 # ==================================================
-# CỔNG 1: NGHE NHẠC (Redirect giống hệt app 8 - Chạy cực mượt)
+# CỔNG 1: NGHE NHẠC (Load thần tốc)
 # ==================================================
 @app.route('/api/play')
 def play_audio():
     client_key = request.args.get("key")
     if client_key != SECRET_KEY:
-        return jsonify({"error": "Unauthorized! Đi chỗ khác chơi!"}), 403
+        return jsonify({"error": "Unauthorized!"}), 403
 
     video_id = request.args.get('v')
     if not video_id:
@@ -59,7 +67,7 @@ def play_audio():
     try:
         audio_url = get_audio_url(video_id)
         if not audio_url:
-            return "Không tìm thấy định dạng âm thanh.", 500
+            return "Không tìm thấy định dạng.", 500
             
         return redirect(audio_url)
     except Exception as e:
@@ -67,13 +75,13 @@ def play_audio():
         return f"🚨 Lỗi: {str(e)}", 500
 
 # ==================================================
-# CỔNG 2: TẢI OFFLINE (Bơm Proxy 1MB/s để ép tốc độ)
+# CỔNG 2: TẢI OFFLINE (Bơm Proxy 1MB/s)
 # ==================================================
 @app.route('/api/download')
 def download_audio():
     client_key = request.args.get("key")
     if client_key != SECRET_KEY:
-        return jsonify({"error": "Unauthorized! Đi chỗ khác chơi!"}), 403
+        return jsonify({"error": "Unauthorized!"}), 403
 
     video_id = request.args.get('v')
     if not video_id:
@@ -82,14 +90,13 @@ def download_audio():
     try:
         audio_url = get_audio_url(video_id)
         if not audio_url:
-            return "Không tìm thấy định dạng âm thanh.", 500
+            return "Không tìm thấy định dạng.", 500
 
         r = requests.get(audio_url, stream=True)
         if r.status_code in [403, 401]:
             if video_id in url_cache: del url_cache[video_id]
             return "Bị khóa IP", 403
 
-        # Ép bơm dữ liệu cục to 1MB để tải siêu nhanh
         resp = Response(r.iter_content(chunk_size=1048576), status=r.status_code)
         
         for k, v in r.headers.items():
