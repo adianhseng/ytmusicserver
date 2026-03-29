@@ -1,7 +1,7 @@
 import os
 import traceback
 import requests
-from flask import Flask, request, redirect, jsonify, Response
+from flask import Flask, request, jsonify, Response
 from cachetools import TTLCache
 import yt_dlp
 
@@ -15,9 +15,11 @@ SECRET_KEY = os.environ.get("APP_SECRET_KEY", "LumiaWP81-An")
 
 @app.route('/')
 def home():
-    return "🚀 API Railway (Bản Kép: Nghe Redirect - Tải Proxy Mượt Mà) đang hoạt động!"
+    return "🚀 API Railway (Bản Proxy Toàn Diện 64KB cho cả Nghe & Tải) đang hoạt động!"
 
-# HÀM LẤY LINK
+# ==================================================
+# HÀM LẤY LINK TỪ YT-DLP (Giữ nguyên cấu hình chuẩn xác của bạn)
+# ==================================================
 def get_audio_url(video_id):
     if video_id in url_cache:
         return url_cache[video_id]
@@ -44,52 +46,21 @@ def get_audio_url(video_id):
         raise e
 
 # ==================================================
-# CỔNG 1: NGHE NHẠC (Redirect siêu mượt)
+# BỘ ĐỘNG CƠ PROXY STREAMING 64KB (Dùng chung cho Nghe & Tải)
 # ==================================================
-@app.route('/api/play')
-def play_audio():
-    client_key = request.args.get("key")
-    if client_key != SECRET_KEY:
-        return jsonify({"error": "Unauthorized! Đi chỗ khác chơi!"}), 403
-
-    video_id = request.args.get('v')
-    if not video_id:
-        return "Lỗi: Thiếu ID bài hát", 400
-
+def proxy_stream(audio_url, video_id):
     try:
-        audio_url = get_audio_url(video_id)
-        if not audio_url:
-            return "Không tìm thấy định dạng âm thanh.", 500
+        req_headers = {}
+        # Hỗ trợ truyền Range cực kỳ quan trọng để WP8.1 có thể tua nhạc (seek)
+        if "Range" in request.headers:
+            req_headers["Range"] = request.headers["Range"]
             
-        return redirect(audio_url)
-    except Exception as e:
-        traceback.print_exc()
-        return f"🚨 Lỗi: {str(e)}", 500
-
-# ==================================================
-# CỔNG 2: TẢI OFFLINE (Bơm Proxy 64KB luồng chảy liên tục)
-# ==================================================
-@app.route('/api/download')
-def download_audio():
-    client_key = request.args.get("key")
-    if client_key != SECRET_KEY:
-        return jsonify({"error": "Unauthorized! Đi chỗ khác chơi!"}), 403
-
-    video_id = request.args.get('v')
-    if not video_id:
-        return "Lỗi: Thiếu ID bài hát", 400
-
-    try:
-        audio_url = get_audio_url(video_id)
-        if not audio_url:
-            return "Không tìm thấy định dạng âm thanh.", 500
-
-        r = requests.get(audio_url, stream=True)
+        r = requests.get(audio_url, headers=req_headers, stream=True)
         if r.status_code in [403, 401]:
             if video_id in url_cache: del url_cache[video_id]
             return "Bị khóa IP", 403
 
-        # ĐÃ SỬA TẠI ĐÂY: Dùng hàm yield và chunk 64KB để dữ liệu chảy liên tục không bị nghẽn
+        # Dùng ống bơm 64KB chảy liên tục, không bị nghẽn ở 0%
         def generate():
             for chunk in r.iter_content(chunk_size=65536):
                 if chunk:
@@ -106,7 +77,48 @@ def download_audio():
             
         resp.direct_passthrough = True
         return resp
+    except Exception as e:
+        traceback.print_exc()
+        return f"🚨 Lỗi Stream: {str(e)}", 500
 
+# ==================================================
+# CỔNG 1: NGHE NHẠC
+# ==================================================
+@app.route('/api/play')
+def play_audio():
+    client_key = request.args.get("key")
+    if client_key != SECRET_KEY:
+        return jsonify({"error": "Unauthorized! Đi chỗ khác chơi!"}), 403
+
+    video_id = request.args.get('v')
+    if not video_id: return "Lỗi: Thiếu ID bài hát", 400
+
+    try:
+        audio_url = get_audio_url(video_id)
+        if not audio_url: return "Không tìm thấy định dạng âm thanh.", 500
+        # Gọi động cơ Proxy thay vì Redirect
+        return proxy_stream(audio_url, video_id)
+    except Exception as e:
+        traceback.print_exc()
+        return f"🚨 Lỗi: {str(e)}", 500
+
+# ==================================================
+# CỔNG 2: TẢI OFFLINE
+# ==================================================
+@app.route('/api/download')
+def download_audio():
+    client_key = request.args.get("key")
+    if client_key != SECRET_KEY:
+        return jsonify({"error": "Unauthorized! Đi chỗ khác chơi!"}), 403
+
+    video_id = request.args.get('v')
+    if not video_id: return "Lỗi: Thiếu ID bài hát", 400
+
+    try:
+        audio_url = get_audio_url(video_id)
+        if not audio_url: return "Không tìm thấy định dạng âm thanh.", 500
+        # Gọi động cơ Proxy 
+        return proxy_stream(audio_url, video_id)
     except Exception as e:
         traceback.print_exc()
         return f"🚨 Lỗi Stream: {str(e)}", 500
