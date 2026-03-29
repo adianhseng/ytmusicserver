@@ -17,23 +17,20 @@ if cookie_data:
 
 @app.route('/')
 def home():
-    return "🚀 API Railway (Bản Kép - Đã bổ sung Client TV theo ý An) đang hoạt động!"
+    return "🚀 API Railway (Bản Kép Hoàn Hảo - Phục hồi cấu hình Redirect cũ của An) đang hoạt động!"
 
-# Hàm xử lý chung để lấy link từ yt-dlp
 def get_audio_url(video_id):
     if video_id in url_cache:
         return url_cache[video_id]
 
     youtube_url = f"https://www.youtube.com/watch?v={video_id}"
+    
+    # BÊ NGUYÊN XI CẤU HÌNH ĐÃ THÀNH CÔNG TỪ FILE app (6).py CỦA BẠN
     ydl_opts = {
-        'format': '140/bestaudio[ext=m4a]/bestaudio[ext=mp4]/bestaudio/best',
-        
-        # AN ĐÃ ĐÚNG: Xếp 'tv' lên đầu để ép YouTube giao file m4a nguyên khối!
-        'extractor_args': {'youtube': {'client': ['tv', 'android', 'ios', 'web']}},
-        
+        'format': '140/bestaudio[ext=m4a]/18/best[ext=mp4]',
+        'extractor_args': {'youtube': {'client': ['android', 'ios', 'tv', 'web']}},
         'youtube_include_dash_manifest': False,
         'youtube_include_hls_manifest': False,
-        
         'noplaylist': True,
         'quiet': True,
         'no_warnings': True
@@ -50,7 +47,7 @@ def get_audio_url(video_id):
         return audio_url
 
 # ==================================================
-# CỔNG 1: NGHE NHẠC (Dùng Redirect - Siêu mượt, không lỗi Format)
+# CỔNG 1: NGHE NHẠC (Dùng Redirect - Lumia tự bóc tách âm thanh từ file MP4)
 # ==================================================
 @app.route('/api/play')
 def play_audio():
@@ -66,10 +63,10 @@ def play_audio():
         return redirect(url)
     except Exception as e:
         traceback.print_exc()
-        return f"Lỗi yt-dlp: {str(e)}", 500
+        return f"🚨 Lỗi yt-dlp: {str(e)}", 500
 
 # ==================================================
-# CỔNG 2: TẢI OFFLINE (Dùng Proxy 1MB - Thần tốc, phá bóp băng thông)
+# CỔNG 2: TẢI OFFLINE (Bơm Proxy siêu tốc)
 # ==================================================
 @app.route('/api/download')
 def download_audio():
@@ -88,7 +85,6 @@ def download_audio():
             if video_id in url_cache: del url_cache[video_id]
             return "Bị khóa IP", 403
 
-        # Ép bơm dữ liệu cục to 1MB để tải siêu nhanh
         resp = Response(r.iter_content(chunk_size=1048576), status=r.status_code)
         
         for k, v in r.headers.items():
