@@ -17,7 +17,7 @@ if cookie_data:
 
 @app.route('/')
 def home():
-    return "🚀 API Railway (Bản Kép Hoàn Hảo - Phục hồi cấu hình Redirect cũ của An) đang hoạt động!"
+    return "🚀 API Railway (Bản Kép Hoàn Hảo - Đã Khóa Chặn M3U8) đang hoạt động!"
 
 def get_audio_url(video_id):
     if video_id in url_cache:
@@ -25,12 +25,16 @@ def get_audio_url(video_id):
 
     youtube_url = f"https://www.youtube.com/watch?v={video_id}"
     
-    # BÊ NGUYÊN XI CẤU HÌNH ĐÃ THÀNH CÔNG TỪ FILE app (6).py CỦA BẠN
     ydl_opts = {
-        'format': '140/bestaudio[ext=m4a]/18/best[ext=mp4]',
+        # BÍ KÍP CHỐT HẠ: Ép yt-dlp chỉ lấy link media nguyên khối (http/https), tuyệt đối không lấy file chữ m3u8
+        'format': 'bestaudio[ext=m4a][protocol^=http]/140/18/best[ext=mp4][protocol^=http]/best[protocol^=http]',
+        
         'extractor_args': {'youtube': {'client': ['android', 'ios', 'tv', 'web']}},
-        'youtube_include_dash_manifest': False,
+        
+        # Bật DASH để lấy được file M4A bị giấu của NCS, nhưng TẮT HLS để chặn m3u8
+        'youtube_include_dash_manifest': True,
         'youtube_include_hls_manifest': False,
+        
         'noplaylist': True,
         'quiet': True,
         'no_warnings': True
@@ -47,7 +51,7 @@ def get_audio_url(video_id):
         return audio_url
 
 # ==================================================
-# CỔNG 1: NGHE NHẠC (Dùng Redirect - Lumia tự bóc tách âm thanh từ file MP4)
+# CỔNG 1: NGHE NHẠC (Redirect lấy thẳng file m4a/mp4 xịn)
 # ==================================================
 @app.route('/api/play')
 def play_audio():
@@ -66,7 +70,7 @@ def play_audio():
         return f"🚨 Lỗi yt-dlp: {str(e)}", 500
 
 # ==================================================
-# CỔNG 2: TẢI OFFLINE (Bơm Proxy siêu tốc)
+# CỔNG 2: TẢI OFFLINE (Bơm Proxy 1MB tốc độ cao)
 # ==================================================
 @app.route('/api/download')
 def download_audio():
