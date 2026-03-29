@@ -17,7 +17,7 @@ if cookie_data:
 
 @app.route('/')
 def home():
-    return "🚀 API Railway (Bản Kép: Nghe Redirect - Tải Proxy - Đã gắn lại Client Android) đang hoạt động!"
+    return "🚀 API Railway (Bản Kép - Đã bổ sung Client TV theo ý An) đang hoạt động!"
 
 # Hàm xử lý chung để lấy link từ yt-dlp
 def get_audio_url(video_id):
@@ -26,13 +26,11 @@ def get_audio_url(video_id):
 
     youtube_url = f"https://www.youtube.com/watch?v={video_id}"
     ydl_opts = {
-        # Ưu tiên lấy file âm thanh thô m4a/mp4
         'format': '140/bestaudio[ext=m4a]/bestaudio[ext=mp4]/bestaudio/best',
         
-        # ĐÃ THÊM LẠI: Giả lập Android/iOS để ép YouTube nôn file nhạc ra
-        'extractor_args': {'youtube': {'client': ['android', 'ios', 'web']}},
+        # AN ĐÃ ĐÚNG: Xếp 'tv' lên đầu để ép YouTube giao file m4a nguyên khối!
+        'extractor_args': {'youtube': {'client': ['tv', 'android', 'ios', 'web']}},
         
-        # ĐÃ THÊM LẠI: Chặn file playlist m3u8 để tránh lỗi Format not supported trên Lumia
         'youtube_include_dash_manifest': False,
         'youtube_include_hls_manifest': False,
         
