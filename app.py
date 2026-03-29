@@ -15,9 +15,9 @@ SECRET_KEY = os.environ.get("APP_SECRET_KEY", "LumiaWP81-An")
 
 @app.route('/')
 def home():
-    return "🚀 API Railway (Bản Kép: Nghe Redirect - Tải Proxy - Dựa trên app 8) đang hoạt động!"
+    return "🚀 API Railway (Bản Kép: Nghe Redirect - Tải Proxy Mượt Mà) đang hoạt động!"
 
-# HÀM LẤY LINK: GIỮ NGUYÊN 100% CẤU HÌNH TỪ FILE app (8).py CỦA BẠN
+# HÀM LẤY LINK
 def get_audio_url(video_id):
     if video_id in url_cache:
         return url_cache[video_id]
@@ -44,7 +44,7 @@ def get_audio_url(video_id):
         raise e
 
 # ==================================================
-# CỔNG 1: NGHE NHẠC (Redirect giống hệt app 8 - Chạy cực mượt)
+# CỔNG 1: NGHE NHẠC (Redirect siêu mượt)
 # ==================================================
 @app.route('/api/play')
 def play_audio():
@@ -67,7 +67,7 @@ def play_audio():
         return f"🚨 Lỗi: {str(e)}", 500
 
 # ==================================================
-# CỔNG 2: TẢI OFFLINE (Bơm Proxy 1MB/s để ép tốc độ)
+# CỔNG 2: TẢI OFFLINE (Bơm Proxy 64KB luồng chảy liên tục)
 # ==================================================
 @app.route('/api/download')
 def download_audio():
@@ -89,8 +89,13 @@ def download_audio():
             if video_id in url_cache: del url_cache[video_id]
             return "Bị khóa IP", 403
 
-        # Ép bơm dữ liệu cục to 1MB để tải siêu nhanh
-        resp = Response(r.iter_content(chunk_size=1048576), status=r.status_code)
+        # ĐÃ SỬA TẠI ĐÂY: Dùng hàm yield và chunk 64KB để dữ liệu chảy liên tục không bị nghẽn
+        def generate():
+            for chunk in r.iter_content(chunk_size=65536):
+                if chunk:
+                    yield chunk
+
+        resp = Response(generate(), status=r.status_code)
         
         for k, v in r.headers.items():
             if k.lower() not in ['content-encoding', 'transfer-encoding', 'connection']:
