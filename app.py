@@ -10,7 +10,7 @@ app = Flask(__name__)
 url_cache = TTLCache(maxsize=1000, ttl=7200)
 SECRET_KEY = os.environ.get("APP_SECRET_KEY", "LumiaWP81-An")
 
-# 1. PHỤC HỒI COOKIES: Giúp qua mặt giới hạn độ tuổi tức thì mà không cần load đường vòng
+# NẠP COOKIE CHỐNG GIỚI HẠN ĐỘ TUỔI
 cookie_data = os.environ.get('COOKIE_DATA')
 if cookie_data:
     with open('cookies.txt', 'w', encoding='utf-8') as f:
@@ -18,7 +18,7 @@ if cookie_data:
 
 @app.route('/')
 def home():
-    return "🚀 API Railway (Bản Kép - Tối Ưu Tốc Độ Load) đang hoạt động!"
+    return "🚀 API Railway (Bản Kép Nồi Đồng Cối Đá - Mặt Nạ 4 Lớp) đang hoạt động!"
 
 def get_audio_url(video_id):
     if video_id in url_cache:
@@ -26,10 +26,10 @@ def get_audio_url(video_id):
 
     youtube_url = f"https://www.youtube.com/watch?v={video_id}"
     ydl_opts = {
-        'format': '140/bestaudio[ext=m4a]/bestaudio/best',
+        'format': '140/bestaudio[ext=m4a]/18/best[ext=mp4]',
         
-        # 2. LỘT BỚT MẶT NẠ: Chỉ dùng 'web' và 'android', bỏ 'ios' và 'tv' để tăng gấp đôi tốc độ dò link
-        'extractor_args': {'youtube': {'client': ['web', 'android']}},
+        # CHỐT GIỮ MẶT NẠ 4 LỚP: Đảm bảo khả năng vượt rào mạnh mẽ nhất
+        'extractor_args': {'youtube': {'client': ['android', 'ios', 'tv', 'web']}},
         
         'youtube_include_dash_manifest': False,
         'youtube_include_hls_manifest': False,
@@ -52,7 +52,7 @@ def get_audio_url(video_id):
         raise e
 
 # ==================================================
-# CỔNG 1: NGHE NHẠC (Load thần tốc)
+# CỔNG 1: NGHE NHẠC (Chuyển hướng trực tiếp để Lumia tự xử lý)
 # ==================================================
 @app.route('/api/play')
 def play_audio():
@@ -67,7 +67,7 @@ def play_audio():
     try:
         audio_url = get_audio_url(video_id)
         if not audio_url:
-            return "Không tìm thấy định dạng.", 500
+            return "Không tìm thấy định dạng âm thanh.", 500
             
         return redirect(audio_url)
     except Exception as e:
@@ -75,7 +75,7 @@ def play_audio():
         return f"🚨 Lỗi: {str(e)}", 500
 
 # ==================================================
-# CỔNG 2: TẢI OFFLINE (Bơm Proxy 1MB/s)
+# CỔNG 2: TẢI OFFLINE (Sử dụng Proxy bơm dữ liệu lớn)
 # ==================================================
 @app.route('/api/download')
 def download_audio():
@@ -90,13 +90,14 @@ def download_audio():
     try:
         audio_url = get_audio_url(video_id)
         if not audio_url:
-            return "Không tìm thấy định dạng.", 500
+            return "Không tìm thấy định dạng âm thanh.", 500
 
         r = requests.get(audio_url, stream=True)
         if r.status_code in [403, 401]:
             if video_id in url_cache: del url_cache[video_id]
             return "Bị khóa IP", 403
 
+        # Ép bơm dữ liệu cục to 1MB để tải siêu nhanh
         resp = Response(r.iter_content(chunk_size=1048576), status=r.status_code)
         
         for k, v in r.headers.items():
