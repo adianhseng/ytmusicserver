@@ -1,7 +1,8 @@
 import os
 import traceback
 import requests
-from flask import Flask, request, jsonify, Response
+# ĐÃ BỔ SUNG THÊM 'redirect' VÀO ĐÂY
+from flask import Flask, request, redirect, jsonify, Response
 from cachetools import TTLCache
 import yt_dlp
 
@@ -15,7 +16,7 @@ SECRET_KEY = os.environ.get("APP_SECRET_KEY", "LumiaWP81-An")
 
 @app.route('/')
 def home():
-    return "🚀 API Railway (Bản Proxy Toàn Diện 64KB cho cả Nghe & Tải) đang hoạt động!"
+    return "🚀 API Railway (Bản Pha Trộn Hoàn Hảo - Dựa trên app 10) đang hoạt động!"
 
 # ==================================================
 # HÀM LẤY LINK TỪ YT-DLP (Giữ nguyên cấu hình chuẩn xác của bạn)
@@ -46,7 +47,7 @@ def get_audio_url(video_id):
         raise e
 
 # ==================================================
-# BỘ ĐỘNG CƠ PROXY STREAMING 64KB (Dùng chung cho Nghe & Tải)
+# BỘ ĐỘNG CƠ PROXY STREAMING 64KB (Chỉ dành để Nghe nhạc)
 # ==================================================
 def proxy_stream(audio_url, video_id):
     try:
@@ -60,7 +61,7 @@ def proxy_stream(audio_url, video_id):
             if video_id in url_cache: del url_cache[video_id]
             return "Bị khóa IP", 403
 
-        # Dùng ống bơm 64KB chảy liên tục, không bị nghẽn ở 0%
+        # Dùng ống bơm 64KB chảy liên tục
         def generate():
             for chunk in r.iter_content(chunk_size=65536):
                 if chunk:
@@ -82,7 +83,7 @@ def proxy_stream(audio_url, video_id):
         return f"🚨 Lỗi Stream: {str(e)}", 500
 
 # ==================================================
-# CỔNG 1: NGHE NHẠC
+# CỔNG 1: NGHE NHẠC (Dùng Proxy để phát mượt Vevo/NCS)
 # ==================================================
 @app.route('/api/play')
 def play_audio():
@@ -96,14 +97,14 @@ def play_audio():
     try:
         audio_url = get_audio_url(video_id)
         if not audio_url: return "Không tìm thấy định dạng âm thanh.", 500
-        # Gọi động cơ Proxy thay vì Redirect
+        # Gọi động cơ Proxy
         return proxy_stream(audio_url, video_id)
     except Exception as e:
         traceback.print_exc()
         return f"🚨 Lỗi: {str(e)}", 500
 
 # ==================================================
-# CỔNG 2: TẢI OFFLINE
+# CỔNG 2: TẢI OFFLINE (Dùng Redirect để tải siêu tốc)
 # ==================================================
 @app.route('/api/download')
 def download_audio():
@@ -117,8 +118,9 @@ def download_audio():
     try:
         audio_url = get_audio_url(video_id)
         if not audio_url: return "Không tìm thấy định dạng âm thanh.", 500
-        # Gọi động cơ Proxy 
-        return proxy_stream(audio_url, video_id)
+        
+        # CHUYỂN SANG REDIRECT ĐỂ MỞ KHÓA BĂNG THÔNG TẢI
+        return redirect(audio_url)
     except Exception as e:
         traceback.print_exc()
         return f"🚨 Lỗi Stream: {str(e)}", 500
