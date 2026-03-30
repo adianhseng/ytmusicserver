@@ -1,7 +1,7 @@
 import os
 import traceback
 import requests
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, redirect, jsonify, Response
 from cachetools import TTLCache
 import yt_dlp
 
@@ -13,12 +13,18 @@ url_cache = TTLCache(maxsize=1000, ttl=7200)
 # TỐI ƯU 2: KHÓA BẢO MẬT
 SECRET_KEY = os.environ.get("APP_SECRET_KEY", "LumiaWP81-An")
 
+# NẠP COOKIE CHỐNG GIỚI HẠN ĐỘ TUỔI
+cookie_data = os.environ.get('COOKIE_DATA')
+if cookie_data:
+    with open('cookies.txt', 'w', encoding='utf-8') as f:
+        f.write(cookie_data)
+
 @app.route('/')
 def home():
-    return "🚀 API Railway (Bản Proxy Toàn Diện 64KB cho cả Nghe & Tải) đang hoạt động!"
+    return "🚀 API Railway (Bản Pha Trộn: Nghe Proxy - Tải Redirect) đang hoạt động!"
 
 # ==================================================
-# HÀM LẤY LINK TỪ YT-DLP (Giữ nguyên cấu hình chuẩn xác của bạn)
+# HÀM LẤY LINK TỪ YT-DLP (Mặt nạ 4 lớp chuẩn xác)
 # ==================================================
 def get_audio_url(video_id):
     if video_id in url_cache:
@@ -35,6 +41,9 @@ def get_audio_url(video_id):
         'no_warnings': True
     }
     
+    if os.path.exists('cookies.txt'):
+        ydl_opts['cookiefile'] = 'cookies.txt'
+
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(youtube_url, download=False)
@@ -46,12 +55,11 @@ def get_audio_url(video_id):
         raise e
 
 # ==================================================
-# BỘ ĐỘNG CƠ PROXY STREAMING 64KB (Dùng chung cho Nghe & Tải)
+# ĐỘNG CƠ PROXY 64KB (Chuyên dùng để NGHE NHẠC VEVO/NCS)
 # ==================================================
 def proxy_stream(audio_url, video_id):
     try:
         req_headers = {}
-        # Hỗ trợ truyền Range cực kỳ quan trọng để WP8.1 có thể tua nhạc (seek)
         if "Range" in request.headers:
             req_headers["Range"] = request.headers["Range"]
             
@@ -60,7 +68,6 @@ def proxy_stream(audio_url, video_id):
             if video_id in url_cache: del url_cache[video_id]
             return "Bị khóa IP", 403
 
-        # Dùng ống bơm 64KB chảy liên tục, không bị nghẽn ở 0%
         def generate():
             for chunk in r.iter_content(chunk_size=65536):
                 if chunk:
@@ -82,7 +89,7 @@ def proxy_stream(audio_url, video_id):
         return f"🚨 Lỗi Stream: {str(e)}", 500
 
 # ==================================================
-# CỔNG 1: NGHE NHẠC
+# CỔNG 1: NGHE NHẠC (Dùng Proxy để lách luật bản quyền)
 # ==================================================
 @app.route('/api/play')
 def play_audio():
@@ -96,14 +103,15 @@ def play_audio():
     try:
         audio_url = get_audio_url(video_id)
         if not audio_url: return "Không tìm thấy định dạng âm thanh.", 500
-        # Gọi động cơ Proxy thay vì Redirect
+        
+        # Gọi bơm Proxy 64KB chảy liên tục
         return proxy_stream(audio_url, video_id)
     except Exception as e:
         traceback.print_exc()
         return f"🚨 Lỗi: {str(e)}", 500
 
 # ==================================================
-# CỔNG 2: TẢI OFFLINE
+# CỔNG 2: TẢI OFFLINE (Dùng Redirect để bung tốc độ tối đa)
 # ==================================================
 @app.route('/api/download')
 def download_audio():
@@ -117,8 +125,9 @@ def download_audio():
     try:
         audio_url = get_audio_url(video_id)
         if not audio_url: return "Không tìm thấy định dạng âm thanh.", 500
-        # Gọi động cơ Proxy 
-        return proxy_stream(audio_url, video_id)
+        
+        # Bắn link trực tiếp cho điện thoại tự kéo file về!
+        return redirect(audio_url)
     except Exception as e:
         traceback.print_exc()
         return f"🚨 Lỗi Stream: {str(e)}", 500
