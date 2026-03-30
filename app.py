@@ -1,8 +1,8 @@
 import os
 import traceback
 import requests
-# ĐÃ BỔ SUNG THÊM 'send_file' ĐỂ GỬI FILE TỪ SERVER VỀ ĐIỆN THOẠI
-from flask import Flask, request, redirect, jsonify, Response, send_file
+# ĐÃ BỔ SUNG 'send_file' ĐỂ BẮN FILE TĨNH VỀ ĐIỆN THOẠI
+from flask import Flask, request, jsonify, Response, send_file
 from cachetools import TTLCache
 import yt_dlp
 
@@ -14,23 +14,17 @@ url_cache = TTLCache(maxsize=1000, ttl=7200)
 # TỐI ƯU 2: KHÓA BẢO MẬT
 SECRET_KEY = os.environ.get("APP_SECRET_KEY", "LumiaWP81-An")
 
-# TẠO THƯ MỤC LƯU NHẠC TẠM THỜI TRÊN SERVER ĐỂ ÉP TỐC ĐỘ TẢI
+# THƯ MỤC Ổ CỨNG ẢO ĐỂ SERVER TẢI NHẠC VỀ TRƯỚC
 DOWNLOAD_DIR = "/tmp/ytmusic"
 if not os.path.exists(DOWNLOAD_DIR):
     os.makedirs(DOWNLOAD_DIR)
 
-# NẠP LẠI COOKIE (Do file 11 bị thiếu, nạp lại để chống lỗi giới hạn độ tuổi)
-cookie_data = os.environ.get('COOKIE_DATA')
-if cookie_data:
-    with open('cookies.txt', 'w', encoding='utf-8') as f:
-        f.write(cookie_data)
-
 @app.route('/')
 def home():
-    return "🚀 API Railway (Nghe Proxy - Tải Server Cache - Dựa trên app 11) đang hoạt động!"
+    return "🚀 API Railway (Bản Tối Thượng: Nghe Proxy - Tải Server Cache - Dựa trên app 11) đang hoạt động!"
 
 # ==================================================
-# HÀM LẤY LINK TỪ YT-DLP (Giữ nguyên cấu hình app 11 của bạn)
+# HÀM LẤY LINK TỪ YT-DLP (Giữ nguyên cấu hình chuẩn xác của bạn)
 # ==================================================
 def get_audio_url(video_id):
     if video_id in url_cache:
@@ -47,6 +41,7 @@ def get_audio_url(video_id):
         'no_warnings': True
     }
     
+    # Vẫn giữ lệnh đọc cookies nếu file txt đã tồn tại trên Server
     if os.path.exists('cookies.txt'):
         ydl_opts['cookiefile'] = 'cookies.txt'
 
@@ -97,7 +92,7 @@ def proxy_stream(audio_url, video_id):
         return f"🚨 Lỗi Stream: {str(e)}", 500
 
 # ==================================================
-# CỔNG 1: NGHE NHẠC (Giữ nguyên proxy_stream của app 11)
+# CỔNG 1: NGHE NHẠC (Dùng Proxy để lách IP Vevo/NCS)
 # ==================================================
 @app.route('/api/play')
 def play_audio():
@@ -118,7 +113,7 @@ def play_audio():
         return f"🚨 Lỗi: {str(e)}", 500
 
 # ==================================================
-# CỔNG 2: TẢI OFFLINE (Đã thay bằng cơ chế Tải Server Cache)
+# CỔNG 2: TẢI OFFLINE (SERVER TẢI VỀ Ổ CỨNG RỒI BƠM VỀ LUMIA)
 # ==================================================
 @app.route('/api/download')
 def download_audio():
@@ -129,15 +124,16 @@ def download_audio():
     video_id = request.args.get('v')
     if not video_id: return "Lỗi: Thiếu ID bài hát", 400
 
+    # Đường dẫn lưu file tạm trên Server
     file_path = os.path.join(DOWNLOAD_DIR, f"{video_id}.m4a")
 
-    # 1. Nếu Server chưa tải bài này, dùng yt-dlp kéo về ổ cứng của Railway cực nhanh
+    # 1. Nếu Server chưa có bài này, ép Server tải về với tốc độ mạng Gigabit
     if not os.path.exists(file_path):
         youtube_url = f"https://www.youtube.com/watch?v={video_id}"
         ydl_opts = {
             'format': '140/bestaudio[ext=m4a]/bestaudio/best',
             'extractor_args': {'youtube': {'client': ['android', 'ios', 'tv', 'web']}},
-            'outtmpl': file_path,  # Ra lệnh lưu file vào ổ cứng Server
+            'outtmpl': file_path, # Lưu file vào ổ cứng Server
             'noplaylist': True,
             'quiet': True,
             'no_warnings': True
@@ -152,7 +148,7 @@ def download_audio():
             traceback.print_exc()
             return f"🚨 Lỗi tải Server: {str(e)}", 500
 
-    # 2. Gửi nguyên khối file từ ổ cứng Server về Lumia (Mở khóa toàn bộ băng thông)
+    # 2. Bắn trực tiếp file nguyên khối từ Server cho Lumia (vượt rào bóp băng thông của Google)
     try:
         return send_file(file_path, mimetype="audio/mp4")
     except Exception as e:
