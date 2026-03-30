@@ -1,8 +1,8 @@
 import os
 import traceback
 import requests
-# ĐÃ BỔ SUNG THÊM 'redirect' VÀO ĐÂY
-from flask import Flask, request, redirect, jsonify, Response
+# ĐÃ BỔ SUNG THÊM 'send_file' ĐỂ GỬI FILE TỪ SERVER VỀ ĐIỆN THOẠI
+from flask import Flask, request, redirect, jsonify, Response, send_file
 from cachetools import TTLCache
 import yt_dlp
 
@@ -14,12 +14,23 @@ url_cache = TTLCache(maxsize=1000, ttl=7200)
 # TỐI ƯU 2: KHÓA BẢO MẬT
 SECRET_KEY = os.environ.get("APP_SECRET_KEY", "LumiaWP81-An")
 
+# TẠO THƯ MỤC LƯU NHẠC TẠM THỜI TRÊN SERVER ĐỂ ÉP TỐC ĐỘ TẢI
+DOWNLOAD_DIR = "/tmp/ytmusic"
+if not os.path.exists(DOWNLOAD_DIR):
+    os.makedirs(DOWNLOAD_DIR)
+
+# NẠP LẠI COOKIE (Do file 11 bị thiếu, nạp lại để chống lỗi giới hạn độ tuổi)
+cookie_data = os.environ.get('COOKIE_DATA')
+if cookie_data:
+    with open('cookies.txt', 'w', encoding='utf-8') as f:
+        f.write(cookie_data)
+
 @app.route('/')
 def home():
-    return "🚀 API Railway (Bản Pha Trộn Hoàn Hảo - Dựa trên app 10) đang hoạt động!"
+    return "🚀 API Railway (Nghe Proxy - Tải Server Cache - Dựa trên app 11) đang hoạt động!"
 
 # ==================================================
-# HÀM LẤY LINK TỪ YT-DLP (Giữ nguyên cấu hình chuẩn xác của bạn)
+# HÀM LẤY LINK TỪ YT-DLP (Giữ nguyên cấu hình app 11 của bạn)
 # ==================================================
 def get_audio_url(video_id):
     if video_id in url_cache:
@@ -36,6 +47,9 @@ def get_audio_url(video_id):
         'no_warnings': True
     }
     
+    if os.path.exists('cookies.txt'):
+        ydl_opts['cookiefile'] = 'cookies.txt'
+
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(youtube_url, download=False)
@@ -83,7 +97,7 @@ def proxy_stream(audio_url, video_id):
         return f"🚨 Lỗi Stream: {str(e)}", 500
 
 # ==================================================
-# CỔNG 1: NGHE NHẠC (Dùng Proxy để phát mượt Vevo/NCS)
+# CỔNG 1: NGHE NHẠC (Giữ nguyên proxy_stream của app 11)
 # ==================================================
 @app.route('/api/play')
 def play_audio():
@@ -104,7 +118,7 @@ def play_audio():
         return f"🚨 Lỗi: {str(e)}", 500
 
 # ==================================================
-# CỔNG 2: TẢI OFFLINE (Dùng Redirect để tải siêu tốc)
+# CỔNG 2: TẢI OFFLINE (Đã thay bằng cơ chế Tải Server Cache)
 # ==================================================
 @app.route('/api/download')
 def download_audio():
@@ -115,15 +129,35 @@ def download_audio():
     video_id = request.args.get('v')
     if not video_id: return "Lỗi: Thiếu ID bài hát", 400
 
+    file_path = os.path.join(DOWNLOAD_DIR, f"{video_id}.m4a")
+
+    # 1. Nếu Server chưa tải bài này, dùng yt-dlp kéo về ổ cứng của Railway cực nhanh
+    if not os.path.exists(file_path):
+        youtube_url = f"https://www.youtube.com/watch?v={video_id}"
+        ydl_opts = {
+            'format': '140/bestaudio[ext=m4a]/bestaudio/best',
+            'extractor_args': {'youtube': {'client': ['android', 'ios', 'tv', 'web']}},
+            'outtmpl': file_path,  # Ra lệnh lưu file vào ổ cứng Server
+            'noplaylist': True,
+            'quiet': True,
+            'no_warnings': True
+        }
+        if os.path.exists('cookies.txt'):
+            ydl_opts['cookiefile'] = 'cookies.txt'
+
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([youtube_url])
+        except Exception as e:
+            traceback.print_exc()
+            return f"🚨 Lỗi tải Server: {str(e)}", 500
+
+    # 2. Gửi nguyên khối file từ ổ cứng Server về Lumia (Mở khóa toàn bộ băng thông)
     try:
-        audio_url = get_audio_url(video_id)
-        if not audio_url: return "Không tìm thấy định dạng âm thanh.", 500
-        
-        # CHUYỂN SANG REDIRECT ĐỂ MỞ KHÓA BĂNG THÔNG TẢI
-        return redirect(audio_url)
+        return send_file(file_path, mimetype="audio/mp4")
     except Exception as e:
         traceback.print_exc()
-        return f"🚨 Lỗi Stream: {str(e)}", 500
+        return f"🚨 Lỗi gửi file: {str(e)}", 500
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 8080))
